@@ -34,7 +34,8 @@ function organizerUpload(apiQueues) {
     upload: upload,
     testcall: testcall,
     loadGroups: loadGroups,
-    loadProjects: loadProjects
+    loadProjects: loadProjects,
+    loadAcquisitions
   };
   return service;
   function testcall(instance) {
@@ -73,9 +74,27 @@ function organizerUpload(apiQueues) {
       method: 'POST',
       instance,
       apiKey,
-      url: `/upload/label?root=${root||false}`,
+      url: `/upload/uid?root=${root||false}`,
       throwForStatus: true,
       body: body
+    });
+  }
+  function loadAcquisitions(instance, apiKey, groupName, projectLabel) {
+    const body = {
+      groups: {filtered: {filter: {query: {match: {name: groupName}}}}},
+      projects: {filtered: {filter: {query: {match: {label: projectLabel}}}}},
+      path: 'acquisitions'
+    };
+    return _request({
+      method: 'POST',
+      instance,
+      apiKey,
+      url: `/search`,
+      body: body,
+      json: true
+    }).then(function({acquisitions}) {
+      // we throw out the search result wrapper ES gives us to avoid futzing with _source
+      return acquisitions.map(a => a._source);
     });
   }
 }

@@ -9,9 +9,9 @@ const openFileDialog = ipcPromiseCreator('open-file-dialog', 'selected-directory
 
 app.controller('loadCtrl', loadCtrl);
 
-loadCtrl.$inject = ['$timeout', '$rootScope', 'steps', 'organizerStore', 'dicom'];
+loadCtrl.$inject = ['$timeout', '$rootScope', 'steps', 'organizerStore', 'dicom', 'organizerUpload', 'config'];
 
-function loadCtrl($timeout, $rootScope, steps, organizerStore, dicom) {
+function loadCtrl($timeout, $rootScope, steps, organizerStore, dicom, organizerUpload, config) {
   /*jshint validthis: true */
   const vm = this;
   vm.selectFolder = selectFolder;
@@ -19,11 +19,42 @@ function loadCtrl($timeout, $rootScope, steps, organizerStore, dicom) {
     steps.complete();
   }
   function selectFolder() {
+    const busy = organizerStore.get().busy;
+    const success = organizerStore.get().success;
     openFileDialog(steps.current()).then(function(paths) {
       organizerStore.update({dicoms: [], errors: []});
-      const busy = organizerStore.get().busy;
-      const success = organizerStore.get().success;
       busy.state = true;
+      busy.reason = 'Downloading latest from server...';
+      $rootScope.$apply();
+      const projectLabel = 'ENGAGE';
+      const groupName = 'PanLab';
+      /*
+      const projectLabel = 'vwfa';
+      const groupName = 'Wandell Lab';
+      const projectLabel = 'Testdata';
+      const groupName = 'scitran';
+      */
+      const url = config.getItem('url');
+      const apiKey = config.getItem('apiKey');
+      if (!url || !apiKey) {
+        if (!url) {
+          config.setItem('url', '**add URL here**');
+        }
+        if (!apiKey) {
+          config.setItem('apiKey', '');
+        }
+        busy.state = false;
+        success.state = 'warning';
+        success.reason = 'Missing url or API key.';
+        $rootScope.$apply();
+        throw new Error('Missing url or API key.');
+      }
+      return organizerUpload.loadAcquisitions(url, apiKey, groupName, projectLabel).then(function(acquisitions) {
+        organizerStore.update({ acquisitions, detectedProjectLabel: projectLabel })
+        return paths;
+      });
+    }).then(function(paths) {
+      organizerStore.update({dicoms: [], errors: []});
       busy.reason = 'Loading data...';
       $rootScope.$apply();
       const subject = dicom.sortDicoms(paths[0]);

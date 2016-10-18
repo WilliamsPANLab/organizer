@@ -81,9 +81,10 @@ function organizeCtrl(steps, organizerStore){
 
     loaded.size = 0;
     const seriesDicoms = organizerStore.get().seriesDicoms||[];
+    const { detectedProjectLabel } = organizerStore.get();
     let sessions = {};
     let project = {
-      label: 'Untitled',
+      label: detectedProjectLabel || 'Untitled',
       children: sessions
     };
     seriesDicoms.forEach((dicom) => {
@@ -115,6 +116,7 @@ function organizeCtrl(steps, organizerStore){
           acquisitionUID: dicom.acquisitionUID,
           acquisitionTimestamp: dicom.acquisitionTimestamp,
           count: 0,
+          newCount: 0,
           size: 0,
           parent: sessions[dicom.sessionUID]
         };
@@ -124,8 +126,11 @@ function organizeCtrl(steps, organizerStore){
       }
       let acquisition = acquisitions[dicom.acquisitionLabel];
       acquisition.count += 1;
-      acquisition.size += dicom.size;
-      acquisition.parsedFiles.push(dicom);
+      if (dicom.uploadStatus === 'needs-upload') {
+        acquisition.newCount += 1;
+        acquisition.size += dicom.size;
+        acquisition.parsedFiles.push(dicom);
+      }
     });
     select(project);
     vm.projects = [project];

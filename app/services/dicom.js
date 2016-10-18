@@ -11,6 +11,7 @@ const {dirListObs} = require('../common/util.js');
 const dicomParser = require('dicom-parser');
 const TAG_DICT = require('../common/dataDictionary.js').TAG_DICT;
 const crypto = require('crypto');
+const {tryParseENGAGE} = require('../common/engage');
 const filetypes = require('../common/filetypes.json');
 
 const extToScitranType = {};
@@ -28,8 +29,9 @@ const decompressForExt = {
 
 function dicom($rootScope, organizerStore, fileSystemQueues) {
 
-  const parseFileHeaders = (buffer) => {
-    return convertHeaderToObject(dicomParser.parseDicom(buffer));
+  const parseFileHeaders = (buffer, filePath) => {
+    const {subjectToSessions} = organizerStore.get();
+    return tryParseENGAGE(buffer, filePath, subjectToSessions);
   };
 
   const parseFile = (filePath) => {
@@ -48,14 +50,26 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
         }
         const size = buffer.length * buffer.BYTES_PER_ELEMENT;
         const header = parseFileHeaders(buffer, filePath, ext);
+        const acquisition = organizerStore.get().fileHashToAcquisition[hash];
         const type = extToScitranType[ext];
         if (!type) {
           throw new Error(`Invalid extension ${ext} for file ${filePath}`);
+        }
+        let uploadStatus;
+        if (acquisition) {
+          uploadStatus = (
+            acquisition.uid === header.SeriesInstanceUID &&
+            acquisition.label === header.SeriesDescription &&
+            acquisition.session.uid === header.StudyInstanceUID
+          ) ? 'previously-uploaded' : 'server-and-file-header-mismatch';
+        } else {
+          uploadStatus = 'needs-upload';
         }
         return {
           path: filePath,
           contentExt: ext,
           content: buffer,
+          uploadStatus,
           size,
           hash,
           type,

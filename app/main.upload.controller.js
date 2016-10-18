@@ -26,6 +26,7 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
   vm.projectWarning = '';
   vm.asRoot = false;
   vm.url = config.getItem('url') || '';
+  vm.apiKey = config.getItem('apiKey') || '';
   vm.loadGroups = function loadGroups() {
     if (vm.url && vm.apiKey){
       config.setItem('url', vm.url);
@@ -85,9 +86,10 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
         }
         const metadataSes = {
           'session': {
-            'label': sessionUID,
+            'uid': sessionUID,
             'timestamp': session.sessionTimestamp.ts,
             'subject': {
+              // XXX will this discard subject info for existing sessions?
               'code': session.patientID
             }
           }
