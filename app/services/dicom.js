@@ -11,7 +11,7 @@ const {dirListObs} = require('../common/util.js');
 const dicomParser = require('dicom-parser');
 const TAG_DICT = require('../common/dataDictionary.js').TAG_DICT;
 const crypto = require('crypto');
-const {tryParseENGAGE} = require('../common/engage');
+const {tryParseENGAGE,createENGAGEParser} = require('../common/engage');
 const filetypes = require('../common/filetypes.json');
 
 const extToScitranType = {};
@@ -125,8 +125,9 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
       const progress = organizerStore.get().progress;
       const parsed = [];
 
+      const parser = createENGAGEParser(files, parseFile);
       Promise.all(nonerrors.map(function(file) {
-        const p = parseFile(file.path).catch(function(err) {
+        const p = parser(file.path).catch(function(err) {
           return {
             path: file.path,
             err: err
