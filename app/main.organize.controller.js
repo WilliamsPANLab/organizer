@@ -3,6 +3,7 @@
 const angular = require('angular');
 const app = angular.module('app');
 const {humanReadableSize} = require('./common/uiformatters.js');
+const path = require('path');
 
 app.controller('organizeCtrl', organizeCtrl);
 
@@ -81,7 +82,9 @@ function organizeCtrl(steps, organizerStore){
 
     loaded.size = 0;
     const seriesDicoms = organizerStore.get().seriesDicoms||[];
-    const { detectedProjectLabel } = organizerStore.get();
+    const { detectedProjectLabel, fileErrors } = organizerStore.get();
+    fileErrors.previouslyUploaded.files = [];
+    fileErrors.mismatch.files = [];
     let sessions = {};
     let project = {
       label: detectedProjectLabel || 'Untitled',
@@ -130,6 +133,17 @@ function organizeCtrl(steps, organizerStore){
         acquisition.newCount += 1;
         acquisition.size += dicom.size;
         acquisition.parsedFiles.push(dicom);
+      } else if (dicom.uploadStatus === 'previously-uploaded') {
+        // XXX fileErrors is not the best for this
+        fileErrors.previouslyUploaded.files.push({
+          basename: path.basename(dicom.path),
+          message: 'this file was previously uploaded'
+        });
+      } else if (dicom.uploadStatus === 'server-and-file-header-mismatch') {
+        fileErrors.mismatch.files.push({
+          basename: path.basename(dicom.path),
+          message: 'This file and the server have a mismatch'
+        });
       }
     });
     select(project);

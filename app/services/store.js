@@ -28,6 +28,14 @@ function organizerStore() {
       parsing: {
         title: 'Parsing Errors',
         files: []
+      },
+      previouslyUploaded: {
+        title: 'Previously Uploaded',
+        files: []
+      },
+      mismatch: {
+        title: 'Uploaded Incorrectly',
+        files: []
       }
     }
   };
