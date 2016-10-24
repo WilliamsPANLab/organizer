@@ -26,14 +26,14 @@ function loadCtrl($timeout, $rootScope, steps, organizerStore, dicom, organizerU
       busy.state = true;
       busy.reason = 'Downloading latest from server...';
       $rootScope.$apply();
+      /*
       const projectLabel = 'ENGAGE';
       const groupName = 'PanLab';
-      /*
       const projectLabel = 'vwfa';
       const groupName = 'Wandell Lab';
+      */
       const projectLabel = 'Testdata';
       const groupName = 'scitran';
-      */
       const url = config.getItem('url');
       const apiKey = config.getItem('apiKey');
       if (!url || !apiKey) {

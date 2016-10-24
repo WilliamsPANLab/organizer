@@ -113,7 +113,7 @@ function extractMetadata(buffer, filePath) {
 // exported for testing
 exports._extractMetadata = extractMetadata;
 
-exports.tryParseENGAGE = function tryParseENGAGE(buffer, filePath, subjectToSessions) {
+function tryParseENGAGE(buffer, filePath, subjectToSessions) {
   const {
     fileDate,
     subjectCode
@@ -123,14 +123,6 @@ exports.tryParseENGAGE = function tryParseENGAGE(buffer, filePath, subjectToSess
     // dummy value to make downstream code work.
     Manufacturer: ''
   }, getAcquisitionMetadata(subjectCode, fileDate, filePath, subjectToSessions[subjectCode]));
-};
-
-function observableToArray(obs) {
-  return new Promise(function(resolve) {
-    obs.toArray().subscribe(function(array){
-      resolve(array);
-    });
-  });
 }
 
 const primaryEnding = '.csv';
@@ -143,7 +135,26 @@ const allEndings = [
   '.csv'
 ];
 
-exports.createENGAGEParser = function($files, parseFile) {
+let state;
+
+function isPrimaryFile(filePath) {
+  return filePath.endsWith(primaryEnding) && !filePath.endsWith(blocksEnding);
+}
+
+function primaryFileFromSecondary(filePath) {
+  let ending;
+  for (ending of allEndings) {
+    if (filePath.endsWith(ending)) {
+      break;
+    }
+  }
+  return filePath.slice(0, -ending.length) + primaryEnding;
+}
+
+exports.setFiles = function(files) {
+  // reset the state to help if this is called twice.
+  state = {};
+
   /*
   We use a somewhat convoluted scheme to avoid parsing the various files produced
   by the emotional regulation task. Because it generates .xlsx, .psydat, and the
@@ -153,44 +164,64 @@ exports.createENGAGEParser = function($files, parseFile) {
   restructures the file parsing so that non-primary files are parsed after primary
   files.
   */
-  let emoRegPrimaryFiles;
-  const promise = observableToArray($files).then(function(files) {
-    const psydat = files.find(file => path.extname(file) === '.psydat');
-    if (psydat) {
-      emoRegPrimaryFiles = {};
-      for (const filePath of files) {
-        if (filePath.endsWith(primaryEnding) && !filePath.endsWith(blocksEnding)) {
-          emoRegPrimaryFiles[filePath] = parseFile(filePath);
-        }
-      }
-    }
-  })
+  const psydat = files.find(file => path.extname(file.path) === '.psydat');
+  if (!psydat) {
+    return;
+  }
+  // we make sure to put primary files first so their promises will be available for non-primary
+  function score(file) {
+    return isPrimaryFile(file.path) ? 0 : 1;
+  }
+  files.sort(function(a, b) {
+    return score(a) - score(b);
+  });
+  state.emoRegPrimaryPromises = {};
+};
+
+exports.wrapParseFile = (parseFile) => {
   return function(filePath) {
-    return promise.then(function() {
-      // When we've identified _any_ emotional regulation files, we assume they are necessary for all files.
-      if (emoRegPrimaryFiles) {
-        let ending;
-        for (ending of allEndings) {
-          if (filePath.endsWith(ending)) {
-            break;
-          }
-        }
-        const primaryFile = filePath.slice(0, -ending.length) + primaryEnding;
-        const primaryPromise = emoRegPrimaryFiles[primaryFile];
-        if (!primaryPromise) {
-          throw new Error(`Could not find primary EmoReg data file for ${filePath}, looked for ${primaryFile}`);
-        }
-        return primaryPromise.then(function(metadata) {
-          // return a copy to avoid inadvertent state sharing
-          return Object.assign({}, metadata);
-        }, function(err) {
-          const wrapper = new Error(`Primary file ${primaryFile} for ${ending} had an error: ${err.message}`);
-          wrapper.original = err;
-          throw wrapper;
-        });
-      } else {
-        return parseFile(filePath);
-      }
+    // When we've identified _any_ emotional regulation files, we assume they are necessary for all files.
+    if (!state.emoRegPrimaryPromises) {
+      return parseFile(filePath);
+    }
+
+    const primaryFile = primaryFileFromSecondary(filePath);
+
+    if (isPrimaryFile(filePath)) {
+      const p = parseFile(filePath);
+      p.then(function(result) {
+        // making this easy to access sync later on
+        p._header = result.header;
+      });
+      state.emoRegPrimaryPromises[primaryFile] = p;
+      return p;
+    }
+
+    const primaryPromise = state.emoRegPrimaryPromises[primaryFile];
+    if (!primaryPromise) {
+      const error = new Error(`Could not find primary EmoReg data file for ${filePath}, looked for ${primaryFile}`);
+      return Promise.reject(error);
+    }
+    return primaryPromise.catch(function(err) {
+      const wrapper = new Error(`Primary file ${primaryFile} for ${filePath} had an error: ${err.message}`);
+      wrapper.original = err;
+      throw wrapper;
+    }).then(function() {
+      // making sure this runs after the catch in the promise chain to avoid
+      // wrapping an error that happened when parsing this file.
+      return parseFile(filePath);
     });
   };
-}
+};
+
+exports.wrapParseFileHeaders = (parseFileHeaders, organizerStore) => {
+  return function(buffer, filePath) {
+    const primaryFile = primaryFileFromSecondary(filePath);
+    if (primaryFile !== filePath) {
+      // make a copy to avoid accidental modifications
+      return Object.assign({}, state.emoRegPrimaryPromises[primaryFile]._header);
+    }
+    const {subjectToSessions} = organizerStore.get();
+    return tryParseENGAGE(buffer, filePath, subjectToSessions);
+  };
+};

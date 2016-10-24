@@ -11,7 +11,7 @@ const {dirListObs} = require('../common/util.js');
 const dicomParser = require('dicom-parser');
 const TAG_DICT = require('../common/dataDictionary.js').TAG_DICT;
 const crypto = require('crypto');
-const {tryParseENGAGE,createENGAGEParser} = require('../common/engage');
+const engage = require('../common/engage');
 const filetypes = require('../common/filetypes.json');
 
 const extToScitranType = {};
@@ -29,9 +29,8 @@ const decompressForExt = {
 
 function dicom($rootScope, organizerStore, fileSystemQueues) {
 
-  const parseFileHeaders = (buffer, filePath) => {
-    const {subjectToSessions} = organizerStore.get();
-    return tryParseENGAGE(buffer, filePath, subjectToSessions);
+  const parseFileHeaders = (buffer) => {
+    return convertHeaderToObject(dicomParser.parseDicom(buffer));
   };
 
   const parseFile = (filePath) => {
@@ -49,7 +48,7 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
           ext = path.extname(filePath.slice(0, filePath.length - ext.length));
         }
         const size = buffer.length * buffer.BYTES_PER_ELEMENT;
-        const header = parseFileHeaders(buffer, filePath, ext);
+        const header = engage.wrapParseFileHeaders(parseFileHeaders, organizerStore)(buffer, filePath, ext);
         const acquisition = organizerStore.get().fileHashToAcquisition[hash];
         const type = extToScitranType[ext];
         if (!type) {
@@ -125,9 +124,9 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
       const progress = organizerStore.get().progress;
       const parsed = [];
 
-      const parser = createENGAGEParser(files, parseFile);
+      engage.setFiles(nonerrors);
       Promise.all(nonerrors.map(function(file) {
-        const p = parser(file.path).catch(function(err) {
+        const p = engage.wrapParseFile(parseFile)(file.path).catch(function(err) {
           return {
             path: file.path,
             err: err
@@ -175,3 +174,4 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
 
 dicom.$inject = ['$rootScope', 'organizerStore', 'fileSystemQueues'];
 app.factory('dicom', dicom);
+exports.factory = dicom;
