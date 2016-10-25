@@ -30,8 +30,14 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
   vm.loadGroups = function loadGroups() {
     if (vm.url && vm.apiKey){
       config.setItem('url', vm.url);
-      organizerUpload.loadGroups(vm.url, vm.apiKey, vm.asRoot).then(function(groups){
-        vm.groups = JSON.parse(groups);
+      organizerUpload.loadGroups(vm.url, vm.apiKey, vm.asRoot).then(function(body){
+        const groups = JSON.parse(body);
+        const {uploadTarget: {groupName}} = organizerStore.get();
+        const targetGroup = groupName && groups.find(g => g.name === groupName);
+        if (targetGroup) {
+          vm.destinationGroup = targetGroup;
+        }
+        vm.groups = groups;
         $rootScope.$apply();
       },
       function(err) {
@@ -55,8 +61,8 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
             return (p1.label.toLowerCase() === p.label.toLowerCase());
           });
         }).map((p) => p.label);
-        if (intersection.length) {
-          vm.projectWarning = `Some of the projects (${intersection}) already exist!`;
+        if (!intersection.length) {
+          vm.projectWarning = `Some of the projects (${intersection}) do not exist!`;
         }
         $rootScope.$apply();
       },

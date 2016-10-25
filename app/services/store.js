@@ -24,6 +24,14 @@ function organizerStore() {
     busy: {
       state: false
     },
+    uploadTarget: {
+      projectLabel: 'ENGAGE',
+      groupName: 'PanLab'
+      /*
+      projectLabel: 'Testdata',
+      groupName: 'scitran'
+      */
+    },
     fileErrors: {
       parsing: {
         title: 'Parsing Errors',

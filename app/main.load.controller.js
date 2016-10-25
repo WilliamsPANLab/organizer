@@ -21,19 +21,13 @@ function loadCtrl($timeout, $rootScope, steps, organizerStore, dicom, organizerU
   function selectFolder() {
     const busy = organizerStore.get().busy;
     const success = organizerStore.get().success;
+    const {uploadTarget} = organizerStore.get();
     openFileDialog(steps.current()).then(function(paths) {
       organizerStore.update({dicoms: [], errors: []});
       busy.state = true;
       busy.reason = 'Downloading latest from server...';
       $rootScope.$apply();
-      /*
-      const projectLabel = 'ENGAGE';
-      const groupName = 'PanLab';
-      const projectLabel = 'vwfa';
-      const groupName = 'Wandell Lab';
-      */
-      const projectLabel = 'Testdata';
-      const groupName = 'scitran';
+      const {groupName, projectLabel} = uploadTarget;
       const url = config.getItem('url');
       const apiKey = config.getItem('apiKey');
       if (!url || !apiKey) {
