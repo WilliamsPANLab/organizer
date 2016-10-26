@@ -9,7 +9,7 @@ function normalizeSubjectCode(rawCode) {
   }
   let match = /[a-zA-Z]{2}(\d{5})/.exec(rawCode);
   if (!match) {
-    match = /\b000(\d{5})-\d\b/.exec(rawCode);
+    match = /\b000(\d{5})\b/.exec(rawCode);
   }
   if (!match) {
     throw new Error(`ran into code that we couldn't parse: ${rawCode}`);
@@ -29,7 +29,7 @@ function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSe
 
   const date = pacificDayFormat(fileDate);
   const session = subjectSessions.find(s =>
-    pacificDayFormat(moment(s.timestamp)) === date);
+    pacificDayFormat(moment.tz(s.timestamp, 'UTC')) === date);
   if (!session) {
     throw new Error(`Could not find session for ${normalizedSubject} on ${date}.`);
   }
@@ -216,12 +216,17 @@ exports.wrapParseFile = (parseFile) => {
 
 exports.wrapParseFileHeaders = (parseFileHeaders, organizerStore) => {
   return function(buffer, filePath) {
+    const {subjectToSessions} = organizerStore.get();
+
+    if (!state.emoRegPrimaryPromises) {
+      return tryParseENGAGE(buffer, filePath, subjectToSessions);
+    }
+
     const primaryFile = primaryFileFromSecondary(filePath);
     if (primaryFile !== filePath) {
       // make a copy to avoid accidental modifications
       return Object.assign({}, state.emoRegPrimaryPromises[primaryFile]._header);
     }
-    const {subjectToSessions} = organizerStore.get();
     return tryParseENGAGE(buffer, filePath, subjectToSessions);
   };
 };

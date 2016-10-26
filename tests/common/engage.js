@@ -74,7 +74,7 @@ describe('engage parse file', function() {
   it('works for non-EmoReg files', function() {
     const stub = sinon.stub();
     const files = [
-      { path: 'ex12345/hi.csv' },
+      { path: 'ex12345/hi.txt' },
       { path: 'ex12345/hiagain.csv' }
     ];
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));
