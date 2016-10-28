@@ -1,6 +1,8 @@
 const moment = require('moment-timezone');
 const path = require('path');
 const {readlines} = require('./readlines');
+const {groupBy,sortBy} = require('lodash');
+const {get: levenshtein} = require('fast-levenshtein');
 
 function normalizeSubjectCode(rawCode) {
   if (rawCode.indexOf('test') !== -1) {
@@ -22,16 +24,39 @@ function pacificDayFormat(m) {
   return m.tz('America/Los_Angeles').format('YYYY-MM-DD');
 }
 
+let dayToSessions;
+function setSessions(sessions) {
+  dayToSessions = groupBy(sessions, s => pacificDayFormat(moment.tz(s.timestamp, 'UTC')));
+}
+exports.setSessions = setSessions;
+
+function _similarSubjectError(normalizedSubject, date) {
+  // for everything on this day, list things
+  const sameDaySessions = dayToSessions[date];
+  if (!sameDaySessions) {
+    return `There are no sessions on ${date} in Flywheel.`;
+  }
+  const similar = sortBy(sameDaySessions.map(s => s.subject.code),
+    code => levenshtein(normalizeSubjectCode(code), normalizedSubject));
+  return 'Is the name of this subject mistyped? ' +
+    `Here are some subjects that had sessions on ${date}: ${similar.join(', ')}`;
+}
+// exported for testing
+exports._similarSubjectError = _similarSubjectError;
+
 function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSessions) {
+  const date = pacificDayFormat(fileDate);
+
   if (!subjectSessions) {
-    throw new Error(`subject ${normalizedSubject} has no sessions.`);
+    const msg = _similarSubjectError(normalizedSubject, date);
+    throw new Error(`subject ${normalizedSubject} has no sessions. ${msg}`);
   }
 
-  const date = pacificDayFormat(fileDate);
   const session = subjectSessions.find(s =>
     pacificDayFormat(moment.tz(s.timestamp, 'UTC')) === date);
   if (!session) {
-    throw new Error(`Could not find session for ${normalizedSubject} on ${date}.`);
+    const msg = _similarSubjectError(normalizedSubject, date);
+    throw new Error(`Could not find session for ${normalizedSubject} on ${date}. ${msg}`);
   }
   if (!session.uid) {
     throw new Error(`session id=${session.uid}:${session.label} has no uid`);

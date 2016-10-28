@@ -4,7 +4,7 @@ const angular = require('angular');
 const app = angular.module('app');
 const {mapToSeriesRow} = require('../common/uiformatters');
 const {groupBy,uniqBy} = require('lodash');
-const {normalizeSubjectCode} = require('../common/engage');
+const {normalizeSubjectCode,setSessions} = require('../common/engage');
 
 app.factory('organizerStore', organizerStore);
 
@@ -70,6 +70,7 @@ function organizerStore() {
       update.subjectToSessions = groupBy(sessions, function(session) {
         return normalizeSubjectCode(session.subject.code);
       });
+      setSessions(sessions);
       // - we'd like to avoid uploading files that already exist
       update.fileHashToAcquisition = {};
       for (const acquisition of update.acquisitions) {

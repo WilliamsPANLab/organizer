@@ -3,6 +3,7 @@ const assert = require('assert');
 const {Buffer} = require('buffer');
 const moment = require('moment-timezone');
 const sinon = require('sinon');
+const {groupBy} = require('lodash');
 
 const physio = Buffer.from(`% Start time: 2015-01-02 12:03:04.567890
 some stats here`);
@@ -16,24 +17,30 @@ const emoReg = Buffer.from(`hi,date,participant,
 ,2015_Jan_02_0403,00012345-2,
 `);
 
-const subjectToSessions = {
-  '12345': [
-    {
-      uid: 1,
-      timestamp: '2015-11-02T12:03:04Z',
-      subject: {
-        code: '00012345'
-      }
-    },
-    {
-      uid: 2,
-      timestamp: '2015-01-02T12:03:04Z',
-      subject: {
-        code: '00012345'
-      }
+const testSessions = [
+  {
+    uid: 1,
+    timestamp: '2015-11-02T12:03:04Z',
+    subject: {
+      code: '00012345'
     }
-  ]
-};
+  },
+  {
+    uid: 2,
+    timestamp: '2015-01-02T12:03:04Z',
+    subject: {
+      code: '00012345'
+    }
+  },
+  {
+    uid: 3,
+    timestamp: '2015-11-02T12:03:04Z',
+    subject: {
+      code: '00014414'
+    }
+  }
+];
+const subjectToSessions = groupBy(testSessions, s => engage.normalizeSubjectCode(s.subject.code));
 
 const organizerStore = {
   get() {
@@ -126,5 +133,23 @@ describe('engage parse file', function() {
       assert.equal(parseFileHeaders.callCount, 5);
       assert.equal(parseFileHeaders.firstCall.args[1], primary);
     });
+  });
+});
+
+describe('_similarSubjectError', function() {
+  before(function() {
+    engage.setSessions(testSessions);
+  });
+
+  it('has a message when there are no sessions', function() {
+    assert.equal(
+      engage._similarSubjectError('00000', '2015-11-03'),
+      'There are no sessions on 2015-11-03 in Flywheel.');
+  });
+
+  it('returns a list of likely alternative subjects', function() {
+    assert.equal(
+      engage._similarSubjectError('14441', '2015-11-02'),
+      'Is the name of this subject mistyped? Here are some subjects that had sessions on 2015-11-02: 00014414, 00012345');
   });
 });
