@@ -153,7 +153,7 @@ function primaryFileFromSecondary(filePath) {
 
 exports.setFiles = function(files) {
   // reset the state to help if this is called twice.
-  state = {};
+  state = {emoRegPrimaryPromises: {}};
 
   /*
   We use a somewhat convoluted scheme to avoid parsing the various files produced
@@ -175,16 +175,10 @@ exports.setFiles = function(files) {
   files.sort(function(a, b) {
     return score(a) - score(b);
   });
-  state.emoRegPrimaryPromises = {};
 };
 
 exports.wrapParseFile = (parseFile) => {
   return function(filePath) {
-    // When we've identified _any_ emotional regulation files, we assume they are necessary for all files.
-    if (!state.emoRegPrimaryPromises) {
-      return parseFile(filePath);
-    }
-
     const primaryFile = primaryFileFromSecondary(filePath);
 
     if (isPrimaryFile(filePath)) {
@@ -199,8 +193,8 @@ exports.wrapParseFile = (parseFile) => {
 
     const primaryPromise = state.emoRegPrimaryPromises[primaryFile];
     if (!primaryPromise) {
-      const error = new Error(`Could not find primary EmoReg data file for ${filePath}, looked for ${primaryFile}`);
-      return Promise.reject(error);
+      console.error(`Could not find primary EmoReg data file for ${filePath}, looked for ${primaryFile}`);
+      return parseFile(filePath);
     }
     return primaryPromise.catch(function(err) {
       const wrapper = new Error(`Primary file ${primaryFile} for ${filePath} had an error: ${err.message}`);
@@ -217,16 +211,18 @@ exports.wrapParseFile = (parseFile) => {
 exports.wrapParseFileHeaders = (parseFileHeaders, organizerStore) => {
   return function(buffer, filePath) {
     const {subjectToSessions} = organizerStore.get();
+    const primaryFile = primaryFileFromSecondary(filePath);
 
-    if (!state.emoRegPrimaryPromises) {
+    if (
+      // no emo reg primary file
+      !state.emoRegPrimaryPromises[primaryFile] ||
+      // or this is the primary file, so we need to compute this
+      primaryFile === filePath
+    ) {
       return tryParseENGAGE(buffer, filePath, subjectToSessions);
     }
 
-    const primaryFile = primaryFileFromSecondary(filePath);
-    if (primaryFile !== filePath) {
-      // make a copy to avoid accidental modifications
-      return Object.assign({}, state.emoRegPrimaryPromises[primaryFile]._header);
-    }
-    return tryParseENGAGE(buffer, filePath, subjectToSessions);
+    // make a copy of primary data for secondary to avoid accidental modifications
+    return Object.assign({}, state.emoRegPrimaryPromises[primaryFile]._header);
   };
 };

@@ -79,10 +79,10 @@ describe('engage parse file', function() {
     ];
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));
     const parser = engage.wrapParseFile(function(filePath) {
-      return {
+      return Promise.resolve({
         path: filePath,
         header: parseFileHeaders(physio, filePath)
-      };
+      });
     });
     engage.setFiles(files);
     return Promise.all(files.map(f => parser(f.path))).then(function(items) {
@@ -108,32 +108,23 @@ describe('engage parse file', function() {
     ];
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));
     const parser = engage.wrapParseFile(function(filePath) {
+      const content = filePath === primary || filePath === noPrimaryName ? emoReg : new Buffer('');
       return Promise.resolve({
         path: filePath,
-        header: parseFileHeaders(emoReg, filePath)
+        header: parseFileHeaders(content, filePath)
       });
     });
     engage.setFiles(files);
     const parsed = files.map(f => parser(f.path));
 
-    const noPrimaryIndex = files.findIndex(f => f.path === noPrimaryName);
-    const noPrimary = parsed.splice(noPrimaryIndex, 1)[0];
-
-    return Promise.all([
-      noPrimary.catch(function(err) {
-        assert.equal(
-          err.message,
-          'Could not find primary EmoReg data file for something-else.xlsx, looked for something-else.csv');
-      }),
-      Promise.all(parsed).then(function(items) {
-        // we only call our custom parsing function for engage
-        assert.equal(stub.callCount, 0);
-        for (const item of items) {
-          assert.deepEqual(item.header.PatientID, '00012345');
-        }
-        assert.equal(parseFileHeaders.callCount, 4);
-        assert.equal(parseFileHeaders.firstCall.args[1], primary);
-      })
-    ]);
+    return Promise.all(parsed).then(function(items) {
+      // we only call our custom parsing function for engage
+      assert.equal(stub.callCount, 0);
+      for (const item of items) {
+        assert.deepEqual(item.header.PatientID, '00012345');
+      }
+      assert.equal(parseFileHeaders.callCount, 5);
+      assert.equal(parseFileHeaders.firstCall.args[1], primary);
+    });
   });
 });
