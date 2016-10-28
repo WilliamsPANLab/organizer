@@ -22,6 +22,7 @@ function organizeCtrl(steps, organizerStore){
   vm.handleKeyOnInput = handleKeyOnInput;
   vm.humanReadableSize = humanReadableSize;
   vm.select = select;
+  vm.isEmptyObject = isEmptyObject;
 
   steps.complete();
   function select(container, value) {
@@ -163,5 +164,8 @@ function organizeCtrl(steps, organizerStore){
     } else if (event.which === 27) {
       container.editing = !container.editing;
     }
+  }
+  function isEmptyObject(obj) {
+    return Object.keys(obj).length === 0;
   }
 }
