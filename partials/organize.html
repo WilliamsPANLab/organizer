@@ -18,6 +18,14 @@
             <th width="200">Subject Code</th>
             <th width="200"># of Acquisitions</th>
           </thead>
+          <tbody ng-if="!project.children.length">
+            <tr>
+              <td></td>
+              <td>You uploaded everything! (well, unless it wasn't parseable)</td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
           <tbody ng-repeat="(sessionUID, session) in project.children">
             <tr>
               <td><input type="checkbox" ng-click="organize.select(session)" ng-checked="session.state==='checked'" ng-class="{indeterminate: session.state==='indeterminate'}"></td>
