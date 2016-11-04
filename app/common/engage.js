@@ -65,8 +65,11 @@ function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSe
     throw new Error(`session id=${session.uid}:${session.label} has no timestamp`);
   }
 
+  // session can sometimes have a tz. when null, the tz is assumed to be UTC
+  const sessionTimezone = session.timezone || 'UTC';
+  // ensure we force times to UTC so they stringify appropriately below.
   const acquisitionDate = fileDate.tz('UTC');
-  const sessionDate = moment.tz(session.timestamp, 'UTC');
+  const sessionDate = moment.tz(session.timestamp, sessionTimezone).tz('UTC');
 
   // We try to keep this UID something computable from the session to
   // ensure there is a globally unique and deterministically computable
