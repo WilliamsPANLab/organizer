@@ -67,7 +67,7 @@ describe('extractMetadata', function() {
     assert(fileDate.isSame(moment.tz('2015-01-02T12:03:04', 'UTC')));
   });
 
-  it('works for emoreg files', function() {
+  it.skip('works for emoreg files', function() {
     const {
       fileDate,
       subjectCode
@@ -102,7 +102,7 @@ describe('engage parse file', function() {
     });
   });
 
-  it('works in EmoReg mode', function() {
+  it.skip('works in EmoReg mode', function() {
     const stub = sinon.stub().throws(new Error('hi'));
     const primary = 'something.csv';
     const noPrimaryName = 'something-else.xlsx';

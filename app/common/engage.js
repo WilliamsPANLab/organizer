@@ -125,6 +125,7 @@ function extractMetadata(buffer, filePath) {
     const dateString = row[csvHeader.indexOf('date')];
     fileDate = moment.tz(dateString, 'YYYY_MMM_DD HHmm', 'America/Los_Angeles');
     subjectCode = normalizeSubjectCode(row[csvHeader.indexOf('participant')]);
+    throw new Error('not handling emoreg until rename is done');
   }
   if (!subjectCode || !fileDate) {
     throw new Error(`Could not parse ${filePath}`);
