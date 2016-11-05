@@ -8,6 +8,9 @@ const {groupBy} = require('lodash');
 const physio = Buffer.from(`% Start time: 2015-01-02 12:03:04.567890
 some stats here`);
 
+const physioPTSession = Buffer.from(`% Start time: 2015-02-02 12:03:04.567890
+some stats here`);
+
 const ispot = Buffer.from(`Header = Start
 Product = ispot
 DateTime = 2015/01/02 04:03:04
@@ -20,21 +23,29 @@ const emoReg = Buffer.from(`hi,date,participant,
 const testSessions = [
   {
     uid: 1,
-    timestamp: '2015-11-02T12:03:04Z',
+    timestamp: '2015-11-02T12:03:04',
     subject: {
       code: '00012345'
     }
   },
   {
     uid: 2,
-    timestamp: '2015-01-02T12:03:04Z',
+    timestamp: '2015-01-02T12:03:04',
     subject: {
       code: '00012345'
     }
   },
   {
     uid: 3,
-    timestamp: '2015-11-02T12:03:04Z',
+    timestamp: '2015-02-02T00:03:04',
+    timezone: 'America/Los_Angeles',
+    subject: {
+      code: '00012345'
+    }
+  },
+  {
+    uid: 4,
+    timestamp: '2015-11-02T12:03:04',
     subject: {
       code: '00014414'
     }
@@ -84,11 +95,16 @@ describe('engage parse file', function() {
       { path: 'ex12345/hi.txt' },
       { path: 'ex12345/hiagain.csv' }
     ];
+    const filePathToContent = {
+      'ex12345/hi.txt': physio,
+      // this file ensures we are parsing the `session.timezone` appropriately
+      'ex12345/hiagain.csv': physioPTSession
+    };
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));
     const parser = engage.wrapParseFile(function(filePath) {
       return Promise.resolve({
         path: filePath,
-        header: parseFileHeaders(physio, filePath)
+        header: parseFileHeaders(filePathToContent[filePath], filePath)
       });
     });
     engage.setFiles(files);

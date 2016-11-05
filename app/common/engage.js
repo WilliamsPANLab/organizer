@@ -4,6 +4,12 @@ const {readlines} = require('./readlines');
 const {groupBy,sortBy} = require('lodash');
 const {get: levenshtein} = require('fast-levenshtein');
 
+function sessionTimestamp(session) {
+  // session can sometimes have a tz. when null, the tz is assumed to be UTC
+  const tz = session.timezone || 'UTC';
+  return moment.tz(session.timestamp, tz);
+}
+
 function normalizeSubjectCode(rawCode) {
   if (rawCode.indexOf('test') !== -1) {
     console.error(`ran into test user data: ${rawCode}`);
@@ -26,7 +32,7 @@ function pacificDayFormat(m) {
 
 let dayToSessions;
 function setSessions(sessions) {
-  dayToSessions = groupBy(sessions, s => pacificDayFormat(moment.tz(s.timestamp, 'UTC')));
+  dayToSessions = groupBy(sessions, s => pacificDayFormat(sessionTimestamp(s)));
 }
 exports.setSessions = setSessions;
 
@@ -53,7 +59,7 @@ function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSe
   }
 
   const session = subjectSessions.find(s =>
-    pacificDayFormat(moment.tz(s.timestamp, 'UTC')) === date);
+    pacificDayFormat(sessionTimestamp(s)) === date);
   if (!session) {
     const msg = _similarSubjectError(normalizedSubject, date);
     throw new Error(`Could not find session for ${normalizedSubject} on ${date}. ${msg}`);
@@ -65,11 +71,9 @@ function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSe
     throw new Error(`session id=${session.uid}:${session.label} has no timestamp`);
   }
 
-  // session can sometimes have a tz. when null, the tz is assumed to be UTC
-  const sessionTimezone = session.timezone || 'UTC';
   // ensure we force times to UTC so they stringify appropriately below.
   const acquisitionDate = fileDate.tz('UTC');
-  const sessionDate = moment.tz(session.timestamp, sessionTimezone).tz('UTC');
+  const sessionDate = sessionTimestamp(session.timestamp).tz('UTC');
 
   // We try to keep this UID something computable from the session to
   // ensure there is a globally unique and deterministically computable
