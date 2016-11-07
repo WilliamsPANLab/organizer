@@ -5,10 +5,7 @@ const moment = require('moment-timezone');
 const sinon = require('sinon');
 const {groupBy} = require('lodash');
 
-const physio = Buffer.from(`% Start time: 2015-01-02 12:03:04.567890
-some stats here`);
-
-const physioPTSession = Buffer.from(`% Start time: 2015-02-02 12:03:04.567890
+const physio = Buffer.from(`% Start time: 2015-01-02 04:03:04.567890
 some stats here`);
 
 const ispot = Buffer.from(`Header = Start
@@ -95,16 +92,11 @@ describe('engage parse file', function() {
       { path: 'ex12345/hi.txt' },
       { path: 'ex12345/hiagain.csv' }
     ];
-    const filePathToContent = {
-      'ex12345/hi.txt': physio,
-      // this file ensures we are parsing the `session.timezone` appropriately
-      'ex12345/hiagain.csv': physioPTSession
-    };
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));
     const parser = engage.wrapParseFile(function(filePath) {
       return Promise.resolve({
         path: filePath,
-        header: parseFileHeaders(filePathToContent[filePath], filePath)
+        header: parseFileHeaders(physio, filePath)
       });
     });
     engage.setFiles(files);

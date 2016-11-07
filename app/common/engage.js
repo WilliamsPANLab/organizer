@@ -5,12 +5,7 @@ const {groupBy,sortBy} = require('lodash');
 const {get: levenshtein} = require('fast-levenshtein');
 
 function sessionTimestamp(session) {
-  // session can sometimes have a tz. when null, the tz is assumed to be UTC
-  const tz = session.timezone || 'UTC';
-  if (!session.timestamp) {
-    throw new Error(`session ${session} is missing a timestamp`);
-  }
-  return moment.tz(session.timestamp, tz);
+  return moment.tz(session.timestamp, 'UTC');
 }
 
 function normalizeSubjectCode(rawCode) {
@@ -118,7 +113,7 @@ function extractMetadata(buffer, filePath) {
     const splitPath = filePath.split(path.sep);
     // physio data files are in a folder named by the subject code
     subjectCode = normalizeSubjectCode(splitPath[splitPath.length - 2]);
-    fileDate = moment.tz(lines[0].slice(physioPrefix.length), 'YYYY-MM-DD HH:mm:ss.SSSSSS', 'UTC')
+    fileDate = moment.tz(lines[0].slice(physioPrefix.length), 'YYYY-MM-DD HH:mm:ss.SSSSSS', 'America/Los_Angeles')
   } else if (lines.indexOf('Product = ispot') !== -1) {
     // ispot behavioral data
     const prefix = 'DateTime = ';
