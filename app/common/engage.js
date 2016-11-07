@@ -7,6 +7,9 @@ const {get: levenshtein} = require('fast-levenshtein');
 function sessionTimestamp(session) {
   // session can sometimes have a tz. when null, the tz is assumed to be UTC
   const tz = session.timezone || 'UTC';
+  if (!session.timestamp) {
+    throw new Error(`session ${session} is missing a timestamp`);
+  }
   return moment.tz(session.timestamp, tz);
 }
 
@@ -73,7 +76,7 @@ function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSe
 
   // ensure we force times to UTC so they stringify appropriately below.
   const acquisitionDate = fileDate.tz('UTC');
-  const sessionDate = sessionTimestamp(session.timestamp).tz('UTC');
+  const sessionDate = sessionTimestamp(session).tz('UTC');
 
   // We try to keep this UID something computable from the session to
   // ensure there is a globally unique and deterministically computable
