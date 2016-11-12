@@ -90,9 +90,9 @@ function organizerUpload(apiQueues) {
       instance,
       apiKey,
       url: `/search`,
-      body: body,
-      json: true
-    }).then(function({acquisitions}) {
+      body: JSON.stringify(body)
+    }).then(function(body) {
+      const {acquisitions} = JSON.parse(body);
       // we throw out the search result wrapper ES gives us to avoid futzing with _source
       return acquisitions.map(a => a._source);
     });
