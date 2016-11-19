@@ -1,7 +1,7 @@
 {
-  "name": "scitran-organizer",
+  "name": "scitran-organizer-engage",
   "productName": "Organizer",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "SciTran Data Organizer",
   "main": "main.js",
   "scripts": {
