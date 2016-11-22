@@ -52,7 +52,6 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
         return {
           path: filePath,
           contentExt: ext,
-          content: buffer,
           size,
           hash,
           type,

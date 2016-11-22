@@ -6,10 +6,10 @@ const path = require('path');
 
 app.controller('uploadCtrl', uploadCtrl);
 
-uploadCtrl.$inject = ['$scope', '$rootScope', '$timeout', 'organizerStore', 'organizerUpload', 'zipQueues', 'config'];
+uploadCtrl.$inject = ['$scope', '$rootScope', '$timeout', 'organizerStore', 'organizerUpload', 'zipQueues', 'config', 'fileSystemQueues'];
 
 // jshint maxparams:7
-function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUpload, zipQueues, config){
+function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUpload, zipQueues, config, fileSystemQueues){
   /*jshint validthis: true */
   function updateAsync(body) {
     const {success, busy} = organizerStore.get();
@@ -105,7 +105,6 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
             return;
           }
           const dicomPaths = [];
-          const filesForUpload = [];
           const metadataAcq = {
             acquisition: {
               'uid': acquisition.acquisitionUID,
@@ -114,6 +113,7 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
               'files': []
             }
           };
+          const filesForUploadPromises = [];
           for (const parsedFile of acquisition.parsedFiles) {
             if (parsedFile.type === 'dicom') {
               dicomPaths.push(parsedFile.path);
@@ -123,17 +123,19 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
                 name,
                 type: parsedFile.type
               });
-              filesForUpload.push({
-                name,
-                content: parsedFile.content
-              });
+              filesForUploadPromises.push(fileSystemQueues.append({
+                operation: 'read',
+                path: parsedFile.path
+              }).then(content => ({ name, content })));
             }
           }
           // We zip up dicoms for an acquisition before uploading.
           // Other data is uploaded without modification.
           const zipPromise = dicomPaths.length ?
             zipQueues.append({files: dicomPaths}) : Promise.resolve();
-          return zipPromise.then(function(zip) {
+          return Promise.all([
+            Promise.all(filesForUploadPromises), zipPromise
+          ]).then(function([filesForUpload, zip]) {
             if (dicomPaths.length) {
               const dicomFilename = acquisitionUID + '.zip';
               metadataAcq.acquisition.files.push({
