@@ -3,6 +3,7 @@
 const angular = require('angular');
 const app = angular.module('app');
 const path = require('path');
+const uploadQueue = require('throat')(6);
 
 app.controller('uploadCtrl', uploadCtrl);
 
@@ -95,7 +96,7 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
         const acqKeys = Object.keys(session.children);
         const size = organizerStore.get().loaded.size;
         progress.size = 0;
-        return Promise.all(acqKeys.map((acquisitionUID) => {
+        function uploadAcquisition(acquisitionUID) {
           const acquisition = session.children[acquisitionUID];
           if (acquisition.state !== 'checked' && acquisition.state !== 'indeterminate'){
             return;
@@ -158,6 +159,11 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
               progress.state = 100.0 * progress.size/size;
               $rootScope.$apply();
             });
+          });
+        }
+        return Promise.all(acqKeys.map((acquisitionUID) => {
+          return uploadQueue(() => {
+            return uploadAcquisition(acquisitionUID);
           });
         }));
       });
