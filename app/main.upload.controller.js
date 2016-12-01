@@ -4,6 +4,7 @@ const angular = require('angular');
 const app = angular.module('app');
 const path = require('path');
 const uploadQueue = require('throat')(6);
+const {createZipPromise} = require('./common/archive');
 
 app.controller('uploadCtrl', uploadCtrl);
 
@@ -127,13 +128,16 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
               filesForUploadPromises.push(fileSystemQueues.append({
                 operation: 'read',
                 path: parsedFile.path
-              }).then(content => ({ name, content })));
+              }).then(content => ({
+                name,
+                content: new Blob([content])
+              })));
             }
           }
           // We zip up dicoms for an acquisition before uploading.
           // Other data is uploaded without modification.
           const zipPromise = dicomPaths.length ?
-            zipQueues.append({files: dicomPaths}) : Promise.resolve();
+            createZipPromise(dicomPaths) : Promise.resolve();
           return Promise.all([
             Promise.all(filesForUploadPromises), zipPromise
           ]).then(function([filesForUpload, zip]) {
