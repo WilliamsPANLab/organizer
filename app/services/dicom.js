@@ -49,11 +49,8 @@ function dicom($rootScope, organizerStore, fileSystemQueues) {
         }
         const size = buffer.length * buffer.BYTES_PER_ELEMENT;
         const header = engage.wrapParseFileHeaders(parseFileHeaders, organizerStore)(buffer, filePath, ext);
+        const type = extToScitranType[ext] || extToScitranType['.dcm'];
         const acquisition = organizerStore.get().fileHashToAcquisition[hash];
-        const type = extToScitranType[ext];
-        if (!type) {
-          throw new Error(`Invalid extension ${ext} for file ${filePath}`);
-        }
         let uploadStatus;
         if (acquisition) {
           uploadStatus = (
