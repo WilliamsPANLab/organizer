@@ -17,6 +17,14 @@ const emoReg = Buffer.from(`hi,date,participant,
 ,2015_Jan_02_0403,00012345-2,
 `);
 
+const emoRegWithExtraInfo = Buffer.from(`hi,hey,sup,no_date,no_participant
+${Buffer.alloc(50).join('\n')}
+
+extraInfo
+date,2015_Jan_02_0403
+session,000
+participant,EX12345`);
+
 const testSessions = [
   {
     uid: 1,
@@ -57,6 +65,12 @@ const organizerStore = {
 }
 
 describe('extractMetadata', function() {
+  it('fails for empty files', function() {
+    assert(() =>
+      engage._extractMetadata(Buffer.alloc(0), 'something')
+    , /is empty/);
+  });
+
   it('works for physio files', function() {
     const {
       fileDate,
@@ -75,13 +89,34 @@ describe('extractMetadata', function() {
     assert(fileDate.isSame(moment.tz('2015-01-02T12:03:04', 'UTC')));
   });
 
-  it.skip('works for emoreg files', function() {
+  it('works for emoreg files', function() {
     const {
       fileDate,
       subjectCode
-    } = engage._extractMetadata(emoReg, 'hi/files/something.csv');
+    } = engage._extractMetadata(emoReg, 'hi/files/00012345.csv');
     assert.equal(subjectCode, '12345');
     assert(fileDate.isSame(moment.tz('2015-01-02T12:03', 'UTC')));
+  });
+
+  it('works for emoreg files with extra info sections', function() {
+    const {
+      fileDate,
+      subjectCode
+    } = engage._extractMetadata(emoRegWithExtraInfo, 'hi/files/00012345.csv');
+    assert.equal(subjectCode, '12345');
+    assert(fileDate.isSame(moment.tz('2015-01-02T12:03', 'UTC')));
+  });
+
+  it('fails for emo reg files that have not been renamed', function() {
+    assert(() =>
+      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/EX12345.csv')
+    , /haven't been renamed/);
+  });
+
+  it('fails for emo reg files with only headers', function() {
+    assert(() =>
+      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/00012345.csv')
+    , /only has headers/);
   });
 });
 
@@ -110,15 +145,15 @@ describe('engage parse file', function() {
     });
   });
 
-  it.skip('works in EmoReg mode', function() {
+  it('works in EmoReg mode', function() {
     const stub = sinon.stub().throws(new Error('hi'));
-    const primary = 'something.csv';
-    const noPrimaryName = 'something-else.xlsx';
+    const primary = '00012345.csv';
+    const noPrimaryName = '00012345-else.xlsx';
     const files = [
-      { path: 'something.psydat' },
+      { path: '00012345.psydat' },
       { path: primary },
-      { path: 'somethingblocks.csv' },
-      { path: 'something.xlsx' },
+      { path: '00012345blocks.csv' },
+      { path: '00012345.xlsx' },
       { path: noPrimaryName }
     ];
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));

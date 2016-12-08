@@ -104,6 +104,9 @@ function extractMetadata(buffer, filePath) {
       break;
     }
   }
+  if (!lines.length || !lines[0]) {
+    throw new Error(`File ${filePath} is empty`);
+  }
   const csvHeader = lines[0].split(',');
   let subjectCode;
   let fileDate;
@@ -120,14 +123,43 @@ function extractMetadata(buffer, filePath) {
     const dateLine = lines.find(line => line.startsWith(prefix));
     fileDate = moment.tz(dateLine.slice(prefix.length), 'YYYY/MM/DD HH:mm:ss', 'America/Los_Angeles');
     subjectCode = normalizeSubjectCode(path.basename(filePath).split('_')[0])
-  } else if (csvHeader.indexOf('date') !== -1 && csvHeader.indexOf('participant') !== -1) {
+  } else {
+    // TODO try to make this an `else if`, not just `else`
+    if (path.basename(filePath).slice(0, 3) !== '000') {
+      throw new Error("We are skipping EmoReg files that haven't been renamed.");
+    }
+    if (!lines[1]) {
+      throw new Error('this emo reg file only has headers');
+    }
     // emotional regulation data
     const row = lines[1].split(',');
+    const dateIndex = csvHeader.indexOf('date');
+    const participantIndex = csvHeader.indexOf('participant');
+    let dateString;
+    let rawCode;
+    if (dateIndex === -1 || participantIndex === -1) {
+      // we are parsing an older file format
+      const allLines = Array.from(readlines(buffer));
+      const extraInfoIndex = allLines.indexOf('extraInfo');
+      if (extraInfoIndex === -1) {
+        throw new Error('new kind of emo reg file??');
+      }
+      const extraInfo = {};
+      for (const line of allLines.slice(extraInfoIndex + 1)) {
+        if (line) {
+          const bits = line.split(',');
+          extraInfo[bits[0]] = bits[1];
+        }
+      }
+      dateString = extraInfo.date;
+      rawCode = extraInfo.participant;
+    } else {
+      dateString = row[dateIndex];
+      rawCode = row[participantIndex];
+    }
     // XXX make sure this will work for all month names?
-    const dateString = row[csvHeader.indexOf('date')];
     fileDate = moment.tz(dateString, 'YYYY_MMM_DD HHmm', 'America/Los_Angeles');
-    subjectCode = normalizeSubjectCode(row[csvHeader.indexOf('participant')]);
-    throw new Error('not handling emoreg until rename is done');
+    subjectCode = normalizeSubjectCode(rawCode);
   }
   if (!subjectCode || !fileDate) {
     throw new Error(`Could not parse ${filePath}`);
