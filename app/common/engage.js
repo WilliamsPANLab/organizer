@@ -136,31 +136,28 @@ function extractMetadata(buffer, filePath) {
     // emotional regulation data
     const row = lines[1].split(',');
     const dateIndex = csvHeader.indexOf('date');
-    const participantIndex = csvHeader.indexOf('participant');
     let dateString;
-    let rawCode;
-    if (dateIndex === -1 || participantIndex === -1) {
+    if (dateIndex === -1) {
       // we are parsing an older file format
       const allLines = Array.from(readlines(buffer));
       const extraInfoIndex = allLines.indexOf('extraInfo');
       if (extraInfoIndex === -1) {
         throw new Error('new kind of emo reg file??');
       }
-      const extraInfo = {};
       for (const line of allLines.slice(extraInfoIndex + 1)) {
         if (line) {
           const bits = line.split(',');
-          extraInfo[bits[0]] = bits[1];
+          if (bits[0] === 'date') {
+            dateString = bits[1];
+          }
         }
       }
-      dateString = extraInfo.date;
-      rawCode = extraInfo.participant;
     } else {
       dateString = row[dateIndex];
-      rawCode = row[participantIndex];
     }
     // XXX make sure this will work for all month names?
     fileDate = moment.tz(dateString, 'YYYY_MMM_DD HHmm', 'America/Los_Angeles');
+    const rawCode = path.basename(filePath).split('-')[0];
     subjectCode = normalizeSubjectCode(rawCode);
   }
   if (!subjectCode || !fileDate) {

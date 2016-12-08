@@ -93,7 +93,7 @@ describe('extractMetadata', function() {
     const {
       fileDate,
       subjectCode
-    } = engage._extractMetadata(emoReg, 'hi/files/00012345.csv');
+    } = engage._extractMetadata(emoReg, 'hi/files/00012345-1_emoreg.csv');
     assert.equal(subjectCode, '12345');
     assert(fileDate.isSame(moment.tz('2015-01-02T12:03', 'UTC')));
   });
@@ -102,20 +102,20 @@ describe('extractMetadata', function() {
     const {
       fileDate,
       subjectCode
-    } = engage._extractMetadata(emoRegWithExtraInfo, 'hi/files/00012345.csv');
+    } = engage._extractMetadata(emoRegWithExtraInfo, 'hi/files/00012345-1_emoreg.csv');
     assert.equal(subjectCode, '12345');
     assert(fileDate.isSame(moment.tz('2015-01-02T12:03', 'UTC')));
   });
 
   it('fails for emo reg files that have not been renamed', function() {
     assert(() =>
-      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/EX12345.csv')
+      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/EX12345-1_emoreg.csv')
     , /haven't been renamed/);
   });
 
   it('fails for emo reg files with only headers', function() {
     assert(() =>
-      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/00012345.csv')
+      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/00012345-1_emoreg.csv')
     , /only has headers/);
   });
 });
@@ -147,13 +147,13 @@ describe('engage parse file', function() {
 
   it('works in EmoReg mode', function() {
     const stub = sinon.stub().throws(new Error('hi'));
-    const primary = '00012345.csv';
-    const noPrimaryName = '00012345-else.xlsx';
+    const primary = '00012345-1_emoreg.csv';
+    const noPrimaryName = '00012345-1_emoreg-else.xlsx';
     const files = [
-      { path: '00012345.psydat' },
+      { path: '00012345-1_emoreg.psydat' },
       { path: primary },
-      { path: '00012345blocks.csv' },
-      { path: '00012345.xlsx' },
+      { path: '00012345-1_emoregblocks.csv' },
+      { path: '00012345-1_emoreg.xlsx' },
       { path: noPrimaryName }
     ];
     const parseFileHeaders = sinon.spy(engage.wrapParseFileHeaders(stub, organizerStore));
