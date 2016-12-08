@@ -126,7 +126,9 @@ function extractMetadata(buffer, filePath) {
   } else {
     // TODO try to make this an `else if`, not just `else`
     if (path.basename(filePath).slice(0, 3) !== '000') {
-      throw new Error("We are skipping EmoReg files that haven't been renamed.");
+      const err = new Error('We are skipping EmoReg files that have not been renamed.');
+      err.fileErrorsType = 'skip-old-name-emo-reg';
+      throw err;
     }
     if (!lines[1]) {
       throw new Error('this emo reg file only has headers');

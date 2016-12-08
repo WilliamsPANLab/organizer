@@ -71,7 +71,15 @@ function loadCtrl($timeout, $rootScope, steps, organizerStore, dicom, organizerU
             if (errorsLength) {
               success.state = 'warning';
               success.reason = `There have been ${errorsLength} errors out of ${dicomsOrMessage.length + errorsLength} files`;
-              parsingErrors.files = errors.map(function(e) {
+              parsingErrors.files = errors.filter(function(errorObject) {
+                const error = errorObject.err;
+                const errors = [error];
+                // pull in the original error for EmoReg files
+                if (error.original) {
+                  errors.push(error.original);
+                }
+                return errors.every(err => err.fileErrorsType !== 'skip-old-name-emo-reg');
+              }).map(function(e) {
                 return {
                   basename: path.relative(paths[0], e.path),
                   message: e.err.message || e.err
