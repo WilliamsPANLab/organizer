@@ -96,6 +96,9 @@ function getAcquisitionMetadata(normalizedSubject, fileDate, filePath, subjectSe
   };
 }
 
+const emoRegNamePattern = /^(0{3})\d{5}-\d_\w+(blocks\.csv|\.csv|\.xlsx|\.psydat|\.log)$/;
+const emoRegOldPattern = /^([a-z]{2})?\d{0,6}(\dMO)?_[\w_]+(blocks\.csv|\.csv|\.xlsx|\.psydat|\.log)$/i;
+
 function extractMetadata(buffer, filePath) {
   const lines = [];
   for (const line of readlines(buffer)) {
@@ -125,10 +128,13 @@ function extractMetadata(buffer, filePath) {
     subjectCode = normalizeSubjectCode(path.basename(filePath).split('_')[0])
   } else {
     // TODO try to make this an `else if`, not just `else`
-    if (path.basename(filePath).slice(0, 3) !== '000') {
+    if (emoRegOldPattern.test(path.basename(filePath))) {
       const err = new Error('We are skipping EmoReg files that have not been renamed.');
       err.fileErrorsType = 'skip-old-name-emo-reg';
       throw err;
+    }
+    if (!emoRegNamePattern.test(path.basename(filePath))) {
+      throw new Error('This emo reg file does not follow the emo reg name pattern');
     }
     if (!lines[1]) {
       throw new Error('this emo reg file only has headers');

@@ -107,14 +107,33 @@ describe('extractMetadata', function() {
     assert(fileDate.isSame(moment.tz('2015-01-02T12:03', 'UTC')));
   });
 
-  it('fails for emo reg files that have not been renamed', function() {
-    assert(() =>
-      engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/EX12345-1_emoreg.csv')
-    , /haven't been renamed/);
+  [
+    'MV00001_closestdraft1_2000_Mar_01_0000',
+    'MV0000102MO_closestdraft1_2000_Mar_01_0000',
+    '0001_closestdraft1_2000_Mar_01_0000',
+    '_closestdraft1_2000_Mar_01_0000'
+  ].forEach(function(name) {
+    it('fails for emo reg files that have not been renamed', function() {
+      assert.throws(() =>
+        engage._extractMetadata(Buffer.from('hi,date,participant'), `hi/files/${name}.csv`)
+      , /skipping EmoReg files that have not been renamed/);
+    });
+  });
+
+  it('fails for emo reg files missing a visit number', function() {
+    assert.throws(() =>
+      engage._extractMetadata(emoReg, 'hi/files/00012345_emoreg.csv')
+    , /does not follow the emo reg name pattern/);
+  });
+
+  it('fails for emo reg files missing a leading zero', function() {
+    assert.throws(() =>
+      engage._extractMetadata(emoReg, 'hi/files/0012345-3_emoreg.csv')
+    , /does not follow the emo reg name pattern/);
   });
 
   it('fails for emo reg files with only headers', function() {
-    assert(() =>
+    assert.throws(() =>
       engage._extractMetadata(Buffer.from('hi,date,participant'), 'hi/files/00012345-1_emoreg.csv')
     , /only has headers/);
   });
@@ -148,7 +167,7 @@ describe('engage parse file', function() {
   it('works in EmoReg mode', function() {
     const stub = sinon.stub().throws(new Error('hi'));
     const primary = '00012345-1_emoreg.csv';
-    const noPrimaryName = '00012345-1_emoreg-else.xlsx';
+    const noPrimaryName = '00012345-1_emoregElse.xlsx';
     const files = [
       { path: '00012345-1_emoreg.psydat' },
       { path: primary },
