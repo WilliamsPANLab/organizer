@@ -2,6 +2,9 @@
 const angular = require('angular');
 const app = angular.module('app');
 const urlParse = require('url').parse;
+const {flatten} = require('lodash');
+const throat = require('throat');
+let {baseFetch} = require('./apiQueues');
 const {FormData,wrapBuffer} = require('../common/fetch');
 
 app.factory('organizerUpload', organizerUpload);
@@ -12,6 +15,8 @@ const localHostnames = new Set([
   'localhost'
 ]);
 
+baseFetch = throat(3, baseFetch);
+
 function organizerUpload(apiQueues) {
   function _request(options) {
     let url = options.url;
@@ -21,7 +26,7 @@ function organizerUpload(apiQueues) {
       const scheme = localHostnames.has(hostname) ? 'http' : 'https';
       url = `${scheme}://${options.instance}/api${options.url}`;
     }
-    return apiQueues.append({
+    return baseFetch({
       options: Object.assign({}, options, {
         url,
         headers: Object.assign({
@@ -81,21 +86,28 @@ function organizerUpload(apiQueues) {
     });
   }
   function loadAcquisitions(instance, apiKey, groupName, projectLabel) {
-    const body = {
-      groups: {filtered: {filter: {query: {match: {name: groupName}}}}},
-      projects: {filtered: {filter: {query: {match: {label: projectLabel}}}}},
-      path: 'acquisitions'
-    };
-    return _request({
-      method: 'POST',
-      instance,
-      apiKey,
-      url: `/search`,
-      body: JSON.stringify(body)
-    }).then(function(body) {
-      const {acquisitions} = JSON.parse(body);
-      // we throw out the search result wrapper ES gives us to avoid futzing with _source
-      return acquisitions.map(a => a._source);
-    });
+    function requestJSON(url) {
+      return _request({ instance, apiKey, url }).then(body => JSON.parse(body));
+    }
+
+    return requestJSON(`/groups`).then((groups) => {
+      const group = groups.find(g => g.name === groupName);
+      return requestJSON(`/groups/${group._id}/projects`);
+    }).then((projects) => {
+      const project = projects.find(p => p.label === projectLabel);
+      return requestJSON(`/projects/${project._id}/sessions`);
+    }).then((sessions) => {
+      const promises = sessions.map(session =>
+        requestJSON(`/sessions/${session._id}/acquisitions`).then(acquisitions => {
+          // a bit of a hack here: we attach the session to the acquisition, just like the
+          // elastic search response body we used to get.
+          for (const a of acquisitions) {
+            a.session = session;
+          }
+          return acquisitions;
+        })
+      );
+      return Promise.all(promises).then(result => flatten(result));
+    })
   }
 }
