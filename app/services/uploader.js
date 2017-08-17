@@ -91,7 +91,7 @@ function organizerUpload(apiQueues) {
     }
 
     return requestJSON(`/groups`).then((groups) => {
-      const group = groups.find(g => g.name === groupName);
+      const group = groups.find(g => g.label === groupName);
       return requestJSON(`/groups/${group._id}/projects`);
     }).then((projects) => {
       const project = projects.find(p => p.label === projectLabel);
