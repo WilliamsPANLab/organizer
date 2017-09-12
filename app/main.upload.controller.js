@@ -33,7 +33,7 @@ function uploadCtrl($scope, $rootScope, $timeout, organizerStore, organizerUploa
       organizerUpload.loadGroups(vm.url, vm.apiKey, vm.asRoot).then(function(body){
         const groups = JSON.parse(body);
         const {uploadTarget: {groupName}} = organizerStore.get();
-        const targetGroup = groupName && groups.find(g => g.name === groupName);
+        const targetGroup = groupName && groups.find(g => g.label === groupName);
         if (targetGroup) {
           vm.destinationGroup = targetGroup;
         }

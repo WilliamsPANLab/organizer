@@ -20,7 +20,7 @@
         <button class="button primary" ng-click="upload.loadGroups()" ng-disabled="!(upload.url && upload.apiKey)">Load groups</button>
       </div>
       <div class="form-group" ng-show="upload.groups.length">
-        <select ng-options="group as group.name for group in upload.groups" ng-model="upload.destinationGroup" ng-change="upload.loadProjects()">
+        <select ng-options="group as group.label for group in upload.groups" ng-model="upload.destinationGroup" ng-change="upload.loadProjects()">
           <option value="" ng-show="!upload.destinationGroup">- Select Group -</option>
         </select>
       </div>
