@@ -1,5 +1,8 @@
 # organizer
 SciTran Data Organizer
+
+The SciTran Data Organizer is also compatible with Flywheel. The Organizer requires Node v5.12.0.
+
 ## installation instructions
 
 To install and run the app with linting and hot reloading enabled:
