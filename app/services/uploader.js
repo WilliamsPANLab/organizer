@@ -15,7 +15,7 @@ const localHostnames = new Set([
   'localhost'
 ]);
 
-baseFetch = throat(3, baseFetch);
+baseFetch = throat(4, baseFetch);
 
 function organizerUpload(apiQueues) {
   function _request(options) {
