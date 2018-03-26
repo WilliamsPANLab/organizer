@@ -12,6 +12,8 @@ various issues we've run into with HTTP requests.
 Shimming this API with some simple compatability utilities seems to
 solve these issues.
 
+HACK for the ENGAGE Organizer, we always use the browser's fetch for transparency.
+
 Usage example:
 
 ```
@@ -31,7 +33,9 @@ fetch(host + '/message', {body}).then(function(response) {
 */
 const https = require('https');
 const {remote} = require('electron');
-const environmentNeedsBrowserHTTP = process.platform == 'linux';
+// const environmentNeedsBrowserHTTP = process.platform == 'linux';
+// HACK to always enable fetch for ENGAGE organizer.
+const environmentNeedsBrowserHTTP = true;
 
 if (environmentNeedsBrowserHTTP) {
   exports.fetch = window.fetch;
